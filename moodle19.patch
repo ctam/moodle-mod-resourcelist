@@ -1,0 +1,368 @@
+Index: ../../lib/formslib.php
+===================================================================
+--- ../../lib/formslib.php	(revision 10085)
++++ ../../lib/formslib.php	(revision 10822)
+@@ -562,10 +562,12 @@
+      * @param int $addfieldsno how many fields to add at a time
+      * @param string $addstring name of button, {no} is replaced by no of blanks that will be added.
+      * @param boolean $addbuttoninside if true, don't call closeHeaderBefore($addfieldsname). Default false.
++     * @param int $maxfieldsno maximum number of fields allowed. 0 means no limits.
+      * @return int no of repeats of element in this page
+      */
+     function repeat_elements($elementobjs, $repeats, $options, $repeathiddenname,
+-            $addfieldsname, $addfieldsno=5, $addstring=null, $addbuttoninside=false){
++                             $addfieldsname, $addfieldsno=5, $addstring=null, $addbuttoninside=false, 
++                             $maxfieldsno=0){
+         if ($addstring===null){
+             $addstring = get_string('addfields', 'form', $addfieldsno);
+         } else {
+@@ -576,6 +578,11 @@
+         if (!empty($addfields)){
+             $repeats += $addfieldsno;
+         }
++        if ($maxfieldsno > 0) {
++            if ($repeats > $maxfieldsno) {
++                $repeats = max(0, $addfieldsno, $maxfieldsno);
++            }
++        }
+         $mform =& $this->_form;
+         $mform->registerNoSubmitButton($addfieldsname);
+         $mform->addElement('hidden', $repeathiddenname, $repeats);
+@@ -639,13 +646,36 @@
+                             $params = array_merge(array($realelementname), $params);
+                             call_user_func_array(array(&$mform, 'addRule'), $params);
+                             break;
+-
++                        case 'type' :
++                            $mform->setType($realelementname, $params);
++                            break;
++                        case 'grouprule' :
++                            $params = array_merge(array($realelementname), array($params));
++                            call_user_func_array(array(&$mform, 'addGroupRule'), $params);
++                            break;
++                        case 'advanced' :
++                            $mform->setAdvanced($realelementname, $params);
++                            break;
++                        case 'disabledifs' :
++                            foreach ($params as $ifparams) {
++                                foreach ($namecloned as $num => $name) {
++                                    if ($ifparams[0] == $name) {
++                                        $ifparams[0] = $ifparams[0]."[$i]";
++                                        break;
+                     }
+                 }
++                                $ifparams = array_merge(array($realelementname), $ifparams);
++                                call_user_func_array(array(&$mform, 'disabledIf'), $ifparams);
+             }
++                            break;
+         }
++                }
++            }
++        }
++
++        if (($maxfieldsno < 0) || ($repeats < $maxfieldsno)) {
+         $mform->addElement('submit', $addfieldsname, $addstring);
+-
++        }
+         if (!$addbuttoninside) {
+             $mform->closeHeaderBefore($addfieldsname);
+         }
+Index: ../../course/lib.php
+===================================================================
+--- ../../course/lib.php	(revision 10085)
++++ ../../course/lib.php	(revision 10822)
+@@ -1288,7 +1288,7 @@
+ 
+ function print_section($course, $section, $mods, $modnamesused, $absolute=false, $width="100%") {
+ /// Prints a section full of activity modules
+-    global $CFG, $USER;
++    global $CFG, $USER, $SESSION;
+ 
+     static $initialised;
+ 
+@@ -1329,6 +1329,8 @@
+     //Acccessibility: replace table with list <ul>, but don't output empty list.
+     if (!empty($section->sequence)) {
+ 
++        $mod_skip_list = array();
++
+         // Fix bug #5027, don't want style=\"width:$width\".
+         echo "<ul class=\"section img-text\">\n";
+         $sectionmods = explode(",", $section->sequence);
+@@ -1338,8 +1340,23 @@
+                 continue;
+             }
+ 
++            if (isset($mod_skip_list[$modnumber])) {
++                continue;
++            }
++
+             $mod = $mods[$modnumber];
+ 
++            if ($mod->modname == 'resourcelist') {
++                if (! $reslistitems = get_records('resourcelist_items', 'resourcelistid', 
++                                                  $mod->instance, 'id')) {
++                    continue;
++                }
++                foreach ($reslistitems as $listitem) {
++                    $cm = get_coursemodule_from_instance("resource", $listitem->resourceid);
++                    $mod_skip_list[$cm->id] = $cm->id;
++                }
++            }
++
+             if ($ismoving and $mod->id == $USER->activitycopy) {
+                 // do not display moving mod
+                 continue;
+@@ -1396,6 +1413,44 @@
+                     echo " <span class=\"groupinglabel\">(".format_string($groupings[$mod->groupingid]->name).')</span>';
+                 }
+ 
++            } elseif ($mod->modname == "resourcelist") { 
++                $instancename = format_string($modinfo->cms[$modnumber]->name, true,  $course->id);
++
++                if (!empty($modinfo->cms[$modnumber]->icon)) {
++                    $icon = "$CFG->modpixpath/$mod->modname/".$modinfo->cms[$modnumber]->icon;
++                } else {
++                    $icon = "$CFG->modpixpath/$mod->modname/switch_minus.gif";
++                }
++
++                //Accessibility: for files get description via icon.
++                $altname = $mod->modfullname;
++                
++                // Avoid unnecessary duplication.
++                if (false!==stripos($instancename, $altname)) {
++                    $altname = '';
++                }
++                // File type after name, for alphabetic lists (screen reader).
++                if ($altname) {
++                    $altname = get_accesshide(' '.$altname);
++                }
++
++                $linkcss = $mod->visible ? "" : " class=\"dimmed\" ";
++                $expanded = 'class="collapsed"';
++                if (isset($SESSION->resourcelists) &&
++                    isset($SESSION->resourcelists[$modnumber])) {
++                    if (!empty($SESSION->resourcelists[$modnumber]->expanded)) {
++                        $expanded = 'class="expanded"';
++                    }
++                }
++                echo '<img src="'.$icon.'" class="activityicon" alt="" /> <span '.$extra.' '.$expanded.'>'.
++                    $instancename.$altname.'</span>';
++
++                if (!empty($CFG->enablegroupings) && !empty($mod->groupingid) && has_capability('moodle/course:managegroups', get_context_instance(CONTEXT_COURSE, $course->id))) {
++                    if (!isset($groupings)) {
++                        $groupings = groups_get_all_groupings($course->id);
++                    }
++                    echo " <span class=\"groupinglabel\">(".format_string($groupings[$mod->groupingid]->name).')</span>';
++                }
+             } else { // Normal activity
+                 $instancename = format_string($modinfo->cms[$modnumber]->name, true,  $course->id);
+ 
+@@ -1455,7 +1510,8 @@
+ 
+             if ($isediting) {
+                 // TODO: we must define this as mod property!
+-                if ($groupbuttons and $mod->modname != 'label' and $mod->modname != 'resource' and $mod->modname != 'glossary') {
++                if ($groupbuttons and $mod->modname != 'label' and $mod->modname != 'resource' 
++                    and $mod->modname != 'glossary' and $mod->modname != 'resourcelist') {
+                     if (! $mod->groupmodelink = $groupbuttonslink) {
+                         $mod->groupmode = $course->groupmode;
+                     }
+@@ -1467,8 +1523,43 @@
+                 echo make_editing_buttons($mod, $absolute, true, $mod->indent, $section->section);
+             }
+             echo "</li>\n";
++
++            if ($mod->modname == "resourcelist") {
++                // Get all resources' mod ids
++                if (! $reslistitems = get_records('resourcelist_items', 'resourcelistid', $mod->instance, 'id')) {
++                    // assume no list items
++                    continue;
+         }
+ 
++                foreach ($reslistitems as $listitem) {
++                    $cm = get_coursemodule_from_instance("resource", $listitem->resourceid);
++
++                    echo '<li class="activity '.$cm->modname.'" id="module-'.$cm->id.'">';
++
++                    print_spacer(12, 20 * ($mod->indent + 1), false);
++
++                    $mod_extra = '';
++                    if (!empty($modinfo->cms[$cm->id]->extra)) {
++                        $mod_extra = $modinfo->cms[$cm->id]->extra;
++                    }
++
++                    $mod_instancename = format_string($modinfo->cms[$cm->id]->name, true, $course->id);
++
++                    if (!empty($modinfo->cms[$cm->id]->icon)) {
++                        $icon = "$CFG->pixpath/".$modinfo->cms[$cm->id]->icon;
++                    } else {
++                        $icon = "$CFG->modpixpath/$cm->modname/icon.gif";
++                    }
++
++                    echo '<a '.$linkcss.' '.$mod_extra.        // Title unnecessary!
++                        ' href="'.$CFG->wwwroot.'/mod/'.$cm->modname.'/view.php?id='.$cm->id.'">'.
++                        '<img src="'.$icon.'" class="activityicon" alt="" /> <span>'.
++                        $mod_instancename.$altname.'</span></a>';
++                    echo "</li>\n";
++                }
++            }
++        }
++        
+     } elseif ($ismoving) {
+         echo "<ul class=\"section\">\n";
+     }
+@@ -3397,4 +3488,4 @@
+     return false;
+ }
+ 
+-?>
++?>
+\ No newline at end of file
+Index: ../../course/view.php
+===================================================================
+--- ../../course/view.php	(revision 10085)
++++ ../../course/view.php	(revision 10822)
+@@ -194,6 +194,21 @@
+         }
+     }
+ 
++    if ($CFG->enableajax) {
++        if (empty($CFG->disablecourseajax) ||
++            (!empty($CFG->disablecourseajax) && empty($USER->editing))) {
++            
++            require_js(array('yui_yahoo','yui_dom','yui_event','yui_treeview','yui_connection'));
++            $yui_url = $CFG->wwwroot . '/lib/yui/treeview/assets';
++            $yui_assets = $CFG->dirroot . '/lib/yui/treeview/assets';
++            if (file_exists("$yui_assets/treeview-core.css")) {
++                $CFG->stylesheets[] = "$yui_url/treeview-core.css";
++            } elseif (file_exists("$yui_assets/tree.css")) {
++                $CFG->stylesheets[] = "$yui_url/tree.css";
++            }
++        }
++    }
++
+     $CFG->blocksdrag = $useajax;   // this will add a new class to the header so we can style differently
+ 
+ 
+@@ -242,7 +257,21 @@
+         $COURSE->javascriptportal->print_javascript($course->id);
+     }
+ 
++    // Use AJAX with resourcelist?
++    if ($CFG->enableajax) {
++        if (empty($CFG->disablecourseajax) ||
++            (!empty($CFG->disablecourseajax) && empty($USER->editing))) {            
++            // Resource list javascript file
++            print '<script src="'.$CFG->wwwroot.'/mod/resourcelist/collapse-resourcelist.js" ></script>';
++            print '<script type="text/javascript">'."\n";
++            print ' var resourcelist_wwwroot = "'.$CFG->wwwroot.'";'."\n";
++            print ' var resourcelist_courseid = '.$course->id.";\n";
++            print ' var resourcelist_sesskey = "'.$USER->sesskey.'";'."\n";
++            print '</script>';
++        }
++    }
+ 
++
+     print_footer(NULL, $course);
+ 
+ ?>
+Index: ../../course/rest.php
+===================================================================
+--- ../../course/rest.php	(revision 10085)
++++ ../../course/rest.php	(revision 10822)
+@@ -212,8 +212,39 @@
+                         }
+ 
+                         moveto_module($mod, $section, $beforemod);
++
++                        $rlmod = get_record('modules', 'name', 'resourcelist');
++                        if ($mod->module == $rlmod->id) {
++                            if ($reslistitems = get_records('resourcelist_items', 'resourcelistid', 
++                                                            $mod->instance, 'id')) {
++                                foreach ($reslistitems as $listitem) {
++                                    $resmod = get_coursemodule_from_instance('resource',$listitem->resourceid);
++                                    moveto_module($resmod, $section, $beforemod);
++                                }
++                            }
++                        }
+                         break;
++                    case 'expand':
++                        if (isset($SESSION)) {
++                            if (!isset($SESSION->resourcelists)) {
++                                $SESSION->resourcelists = array();
+                 }
++                            if (!isset($SESSION->resourcelists[$mod->id])) {
++                                $SESSION->resourcelists[$mod->id] = new object();
++                            }
++                            $SESSION->resourcelists[$mod->id]->expanded = true;
++                        }
++                        break;
++                    case 'collapse':
++                        if (isset($SESSION) &&
++                            isset($SESSION->resourcelists) && 
++                            isset($SESSION->resourcelists[$mod->id])){
++                            if (isset($SESSION->resourcelists[$mod->id]->expanded)) {
++                                unset($SESSION->resourcelists[$mod->id]->expanded);
++                            }
++                         } 
++                        break;
++                }
+                 rebuild_course_cache($course->id);
+                 break;
+ 
+Index: ../../course/mod.php
+===================================================================
+--- ../../course/mod.php	(revision 10085)
++++ ../../course/mod.php	(revision 10822)
+@@ -297,6 +297,16 @@
+ 
+         moveto_module($cm, $section, $beforecm);
+ 
++        $rlmod = get_record('modules', 'name', 'resourcelist');
++        if ($cm->module == $rlmod->id) {
++            if ($reslistitems = get_records('resourcelist_items', 'resourcelistid', $cm->instance, 'id')){
++                foreach ($reslistitems as $listitem) {
++                    $resmod = get_coursemodule_from_instance('resource',$listitem->resourceid);
++                    moveto_module($resmod, $section, $beforecm);
++                }
++            }
++        }
++
+         unset($USER->activitycopy);
+         unset($USER->activitycopycourse);
+         unset($USER->activitycopyname);
+Index: ../../course/modedit.php
+===================================================================
+--- ../../course/modedit.php	(revision 10085)
++++ ../../course/modedit.php	(revision 10822)
+@@ -227,6 +227,7 @@
+ 
+         $addinstancefunction    = $fromform->modulename."_add_instance";
+         $updateinstancefunction = $fromform->modulename."_update_instance";
++	$postupdateinstancefunction = $fromform->modulename."_post_update_instance";
+ 
+         if (!isset($fromform->groupingid)) {
+             $fromform->groupingid = 0;
+@@ -264,6 +265,10 @@
+                 set_coursemodule_idnumber($fromform->coursemodule, $fromform->cmidnumber);
+             }
+ 
++	    if (function_exists($postupdateinstancefunction)) {
++	      $postupdateinstancefunction($fromform);
++	    }
++
+             add_to_log($course->id, "course", "update mod",
+                        "../mod/$fromform->modulename/view.php?id=$fromform->coursemodule",
+                        "$fromform->modulename $fromform->instance");
+@@ -313,6 +318,10 @@
+                 set_coursemodule_idnumber($fromform->coursemodule, $fromform->cmidnumber);
+             }
+ 
++	    if (function_exists($postupdateinstancefunction)) {
++	      $postupdateinstancefunction($fromform);
++	    }
++
+             add_to_log($course->id, "course", "add mod",
+                        "../mod/$fromform->modulename/view.php?id=$fromform->coursemodule",
+                        "$fromform->modulename $fromform->instance");
