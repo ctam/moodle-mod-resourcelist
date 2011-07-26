@@ -41,10 +41,10 @@
 ///  Called by moodle_needs_upgrading() and /admin/index.php
 /////////////////////////////////////////////////////////////////////////////////
 
-$module->version  = 2010070100;  // The current module version (Date: YYYYMMDDXX)
+$module->version  = 2011072500;  // The current module version (Date: YYYYMMDDXX)
 $module->requires = 2007101590;  // Requires this Moodle version
 $module->cron     = 0;           // Period for cron to check this module (secs)
 
-$release = "1.0alpha";             // User-friendly version number
+$release = "1.0";                // User-friendly version number
 
 ?>
