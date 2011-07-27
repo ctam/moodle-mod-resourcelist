@@ -6,6 +6,9 @@ San Francisco.
 For copyrights and license information please refer to this file,
 "BSD_License.txt", which is included in the distribution.
 
+For copyrights and license information on the patch file, moodle19.patch,
+which modifies part of the Moodle's core code, please refer to the GPL
+license, "COPYING.txt", distributed with the Moodle source code.
 
 ABOUT THIS MODULE
 -----------------
