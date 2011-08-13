@@ -3,12 +3,9 @@ Resource List for Moodle 1.9.9
 This module is designed and developed by The University of California,
 San Francisco.
 
-For copyrights and license information please refer to this file,
-"BSD_License.txt", which is included in the distribution.
-
-For copyrights and license information on the patch file, moodle19.patch,
-which modifies part of the Moodle's core code, please refer to the GPL
-license, "COPYING.txt", distributed with the Moodle source code.
+For license information please refer to the GNU General Public License
+in "COPYING.txt" distributed along with Moodle or see 
+http://www.gnu.org/licenses/.
 
 ABOUT THIS MODULE
 -----------------
@@ -109,6 +106,9 @@ function correctly with a course.
 
 ADDED FEATURES AND BUG FIXES
 ----------------------------
+2011.08.12
+* Replaced BSD License with GPL License which is required by Moodle.
+
 2011.07.25
 * Added lines that lead to each list item under Resource List.
 
