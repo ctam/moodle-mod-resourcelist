@@ -120,7 +120,7 @@ function backup_resourcelist_items($bf,$preferences,$resourcelist) {
 // backup (and whether to include user data or not). This includes details at [0][0] and [0][1] 
 // about the course module name and number of instances for the course and at [1][0] and [1][1] 
 // with the module name and count of user information.
-function resourcelist_check_backup_mods($course,$user_data=false,$backup_unique_code,$instance=null) {
+function resourcelist_check_backup_mods($course,$user_data=false,$backup_unique_code,$instances=null) {
     if (!empty($instances) && is_array($instances) && count($instances)) {
         $info = array();
         foreach ($instances as $id => $instance) {
@@ -135,7 +135,7 @@ function resourcelist_check_backup_mods($course,$user_data=false,$backup_unique_
     return $info;
 }
 
-function resourcelist_check_backup_mods_instance($instance,$backup_unique_code) {
+function resourcelist_check_backup_mods_instances($instance,$backup_unique_code) {
     //First the course data
     $info[$instance->id.'0'][0] = '<b>'.$instance->name.'</b>';
     $info[$instance->id.'0'][1] = '';
