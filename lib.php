@@ -192,6 +192,9 @@ function resourcelist_post_update_instance($resourcelist) {
         if (is_string($ret)) {
             error($ret);
         }
+        if (isset($listitem->visible)) {
+            set_coursemodule_visible($cm->id, $listitem->visible);
+        }
     }
 
     $beforemod = NULL;
