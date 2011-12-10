@@ -63,6 +63,11 @@ function convertElementToList(el) {
     // move the Commands Span to a spanCmds placeholder, which will later
     // append to the end of el, remove all Img nodes, and append the 
     //rest to liResourceList.
+    var a = el.firstChild;
+
+    if (YAHOO.util.Dom.hasClass(a, "dimmed")) 
+	YAHOO.util.Dom.addClass(divTree, "dimmed_text");
+
     while (el.firstChild) {
 	if (el.firstChild.nodeName == "SPAN") {
 	    if (el.firstChild.className == 'commands') {
@@ -70,53 +75,66 @@ function convertElementToList(el) {
 		for (var i=0; i<el.firstChild.childNodes.length; i++) {
 		    var aCmd = el.firstChild.childNodes[i];
 		    var cmdClass = aCmd.className;
+		    var cmdTitle = aCmd.title;
 
 		    if (cmdClass == "editing_moveleft") {
 			YAHOO.util.Event.removeListener( aCmd, 'click' );
-			YAHOO.util.Event.addListener( aCmd, 'click', moveLeft, el, true );
+			YAHOO.util.Event.addListener( aCmd, 'click', moveLeft_resourcelist, el, true );
 		    } else if (cmdClass == "editing_moveright") {
 			YAHOO.util.Event.removeListener( aCmd, 'click' );
-			YAHOO.util.Event.addListener( aCmd, 'click', moveRight, el, true );
+			YAHOO.util.Event.addListener( aCmd, 'click', moveRight_resourcelist, el, true );
+		    } else if ((cmdTitle == main.portal.strings['show']) ||
+			       (cmdTitle == main.portal.strings['hide'])) {
+			YAHOO.util.Event.removeListener( aCmd, 'click' );
+			YAHOO.util.Event.addListener( aCmd, 'click', toggleHide_resourcelist, aCmd, el );
 		    }
 		}
 		spanCmds.appendChild( el.firstChild );
-	    } else {
-		var strMod = el.firstChild.getAttribute('modules');		
-		if (strMod) {
-		    var modules = strMod.split(',');
-
-		    for (var i=0; i < modules.length; i++) {
-			var liMod = document.getElementById( modules[i] );
-			
-			// remove leading space & edit controls
-			var j = liMod.childNodes.length;
-			while (j--) {
-			    var node = liMod.childNodes[j];
-			    var nodeClass = node.className;
-
-			    if ((nodeClass == "spacer") || (nodeClass == "commands")) {
-				liMod.removeChild( node );
-			    }
-			}
-			ulResourceItems.appendChild( liMod );
-		    }
-		    el.firstChild.removeAttribute('modules');
-
-		    if (el.firstChild.firstChild && el.firstChild.firstChild.nodeValue) {
-			var nodeText = document.createTextNode(el.firstChild.firstChild.nodeValue);
-			var spanText = document.createElement('span');
-			var ahref = document.createElement('a');
-			ahref.setAttribute('href', 'javascript:void(0);');
-			spanText.appendChild( nodeText );
-			ahref.appendChild( spanText );
-			liResourceList.appendChild( ahref );
-		    }
-		}
-		var isExpanded = el.firstChild.className;
-		if (isExpanded == "expanded")
-		    expandedTrees[treeid] = true;
-		el.removeChild(el.firstChild);
 	    }
+	} else if (el.firstChild.nodeName == "A") {
+	    var a = el.firstChild;
+
+	    while (a.firstChild) {
+
+		if (a.firstChild.nodeName == "SPAN") {
+		    var strMod = a.firstChild.getAttribute('modules');		
+		    if (strMod) {
+			var modules = strMod.split(',');
+
+			for (var i=0; i < modules.length; i++) {
+			    var liMod = document.getElementById( modules[i] );
+
+			    // remove leading space & edit controls
+			    var j = liMod.childNodes.length;
+			    while (j--) {
+				var node = liMod.childNodes[j];
+				var nodeClass = node.className;
+
+				if ((nodeClass == "spacer") || (nodeClass == "commands")) {
+				    liMod.removeChild( node );
+				}
+			    }
+			    ulResourceItems.appendChild( liMod );
+			}
+			a.firstChild.removeAttribute('modules');
+
+			if (a.firstChild.firstChild && a.firstChild.firstChild.nodeValue) {
+			    var nodeText = document.createTextNode(a.firstChild.firstChild.nodeValue);
+			    var spanText = document.createElement('span');
+			    var ahref = document.createElement('a');
+			    ahref.setAttribute('href', 'javascript:void(0);');
+			    spanText.appendChild( nodeText );
+			    ahref.appendChild( spanText );
+			    liResourceList.appendChild( ahref );
+			}
+		    }
+		    var isExpanded = a.firstChild.className;
+		    if (isExpanded == "expanded")
+			expandedTrees[treeid] = true;
+		}
+		a.removeChild(a.firstChild);
+	    } 
+	    el.removeChild(el.firstChild);
 	} else if (el.firstChild.nodeName == "IMG") {
 	    // We strip out all images, mainly the icon and spacer
 	    if (el.firstChild.className == "spacer") {
@@ -198,7 +216,7 @@ function buildResourceListTrees() {
  * This function replaces the Moodle's default ajax moveLeft function so that
  * a Resource List can be indented correctly.
  */
-function moveLeft(e) { 
+function moveLeft_resourcelist(e) { 
     var strWidth = this.style.marginLeft;
     var marginWidth = parseInt(strWidth.substr(0, strWidth.indexOf('px')));
 
@@ -223,7 +241,7 @@ function moveLeft(e) {
  * This function replaces the Moodle's default ajax moveRight function so that
  * a Resource List can be indented correctly.
  */
-function moveRight(e) { 
+function moveRight_resourcelist(e) { 
     // for RTL support
     var isrtl = (document.getElementsByTagName("html")[0].dir=="rtl");
 
@@ -241,7 +259,7 @@ function moveRight(e) {
     if (!leftButton) {
         var button = main.mk_button('a', (isrtl?'/t/right.gif':'/t/left.gif'), main.portal.strings['moveleft'],
                 [['class', 'editing_moveleft']]);
-        YAHOO.util.Event.addListener(button, 'click', moveLeft, this, true);
+        YAHOO.util.Event.addListener(button, 'click', moveLeft_resourcelist, this, true);
         commandContainer.insertBefore(button, rightButton);
     }	
 
@@ -252,6 +270,32 @@ function moveRight(e) {
     this.style.marginLeft = marginWidth.toString() + "px";
     main.connect('POST', 'class=resource&field=indentright', null, 'id='+modId);
     return true; 
+}
+
+function toggleHide_resourcelist(e, viewButton) {
+    var strhide = main.portal.strings['hide'];
+    var strshow = main.portal.strings['show'];
+    var modId = this.id.split('-')[1];
+    var tree = YAHOO.util.Dom.get(this.id + "-tree");
+
+    if (viewButton.title == strshow) {
+        YAHOO.util.Dom.removeClass(tree, 'dimmed_text');
+
+        viewButton.childNodes[0].src = viewButton.childNodes[0].src.replace(/show.gif/i, 'hide.gif');
+        viewButton.childNodes[0].alt = viewButton.childNodes[0].alt.replace(strshow, strhide);
+        viewButton.title = viewButton.title.replace(strshow, strhide);
+
+        main.connect('POST', 'class=resource&field=visible', null, 'value=1&id='+modId);
+    } else {
+        YAHOO.util.Dom.addClass(tree, 'dimmed_text');
+
+        viewButton.childNodes[0].src = viewButton.childNodes[0].src.replace(/hide.gif/i, 'show.gif');
+        viewButton.childNodes[0].alt = viewButton.childNodes[0].alt.replace(strhide, strshow);
+        viewButton.title = viewButton.title.replace(strhide, strshow);
+
+        main.connect('POST', 'class=resource&field=visible', null, 'value=0&id='+modId);
+    }
+    return true;
 }
 
 YAHOO.util.Event.onDOMReady(buildResourceListTrees);
