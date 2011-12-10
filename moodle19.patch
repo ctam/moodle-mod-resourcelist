@@ -1,7 +1,7 @@
-diff --git ../..course/lib.php ../..course/lib.php
+diff --git ../../course/lib.php ../../course/lib.php
 index 80494ee..7314cee 100644
---- ../..course/lib.php
-+++ ../..course/lib.php
+--- ../../course/lib.php
++++ ../../course/lib.php
 @@ -1288,7 +1288,7 @@ function set_section_visible($courseid, $sectionnumber, $visibility) {
  
  function print_section($course, $section, $mods, $modnamesused, $absolute=false, $width="100%") {
@@ -158,10 +158,10 @@ index 80494ee..7314cee 100644
      if ($prevstateoverrides) {
          if ($visible == '0') {
              // Remember the current visible state so we can toggle this back.
-diff --git ../..course/mod.php ../..course/mod.php
+diff --git ../../course/mod.php ../../course/mod.php
 index 039c6a3..465ad37 100644
---- ../..course/mod.php
-+++ ../..course/mod.php
+--- ../../course/mod.php
++++ ../../course/mod.php
 @@ -297,6 +297,16 @@
  
          moveto_module($cm, $section, $beforecm);
@@ -179,10 +179,10 @@ index 039c6a3..465ad37 100644
          unset($USER->activitycopy);
          unset($USER->activitycopycourse);
          unset($USER->activitycopyname);
-diff --git ../..course/modedit.php ../..course/modedit.php
+diff --git ../../course/modedit.php ../../course/modedit.php
 index 2170034..09f209d 100644
---- ../..course/modedit.php
-+++ ../..course/modedit.php
+--- ../../course/modedit.php
++++ ../../course/modedit.php
 @@ -227,6 +227,7 @@
  
          $addinstancefunction    = $fromform->modulename."_add_instance";
@@ -213,10 +213,10 @@ index 2170034..09f209d 100644
              add_to_log($course->id, "course", "add mod",
                         "../mod/$fromform->modulename/view.php?id=$fromform->coursemodule",
                         "$fromform->modulename $fromform->instance");
-diff --git ../..course/rest.php ../..course/rest.php
+diff --git ../../course/rest.php ../../course/rest.php
 index 69d106d..0ed6170 100644
---- ../..course/rest.php
-+++ ../..course/rest.php
+--- ../../course/rest.php
++++ ../../course/rest.php
 @@ -212,6 +212,37 @@ switch($req_method) {
                          }
  
@@ -255,10 +255,10 @@ index 69d106d..0ed6170 100644
                          break;
                  }
                  rebuild_course_cache($course->id);
-diff --git ../..course/view.php ../..course/view.php
+diff --git ../../course/view.php ../../course/view.php
 index d38a8a5..da409ab 100644
---- ../..course/view.php
-+++ ../..course/view.php
+--- ../../course/view.php
++++ ../../course/view.php
 @@ -194,6 +194,21 @@
          }
      }
@@ -302,10 +302,10 @@ index d38a8a5..da409ab 100644
  
      print_footer(NULL, $course);
  
-diff --git ../..lib/formslib.php ../..lib/formslib.php
+diff --git ../../lib/formslib.php ../../lib/formslib.php
 index d0743c3..a42b74f 100644
---- ../..lib/formslib.php
-+++ ../..lib/formslib.php
+--- ../../lib/formslib.php
++++ ../../lib/formslib.php
 @@ -562,10 +562,12 @@ class moodleform {
       * @param int $addfieldsno how many fields to add at a time
       * @param string $addstring name of button, {no} is replaced by no of blanks that will be added.
