@@ -365,7 +365,7 @@ index d0743c3..a42b74f 100644
          }
 -        $mform->addElement('submit', $addfieldsname, $addstring);
  
-+        if (($maxfieldsno < 0) || ($repeats < $maxfieldsno)) {
++        if (($maxfieldsno <= 0) || ($repeats < $maxfieldsno)) {
 +        $mform->addElement('submit', $addfieldsname, $addstring);
 +        }
          if (!$addbuttoninside) {
